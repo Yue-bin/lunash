@@ -1,4 +1,4 @@
-# luash
+# lunash
 
 `bash-like`的shell，但是使用lua语法和函数代理式的二进制调用
 
