@@ -3,29 +3,48 @@
 --- @class env
 local _M = {}
 
+local strings = require("core.utils.strings")
 local stdlib = require("posix.stdlib")
 
 --- @alias env_key string
---- @alias env_value string
-
---- 全局环境，用于存放环境变量
---- @type {env_key:env_value}
-_M._env = {}
-
---- 从系统环境变量中导入环境变量
-function _M:init()
-    local env = stdlib.getenv()
-    for k, v in pairs(env) do
-        self._env[k] = v
-    end
-end
+--- @alias env_value string?
 
 --- 获取环境变量
---- @param name string
+--- @param key env_key
 --- @return env_value
-function _M:get(name)
-    return self._env[name] or ""
+function _M.get(key)
+    -- 防止传入nil之后回传所有的env
+    -- getenv在键不存在的情况下返回nil
+    if key == nil then
+        return nil
+    end
+    return stdlib.getenv(key)
 end
+
+--- 设置环境变量
+--- @param key env_key
+--- @param value env_value
+function _M.set(key, value)
+    -- value 为nil则删除，符合直觉
+    stdlib.setenv(key, value)
+end
+
+--- 全局环境，用于代理到环境变量的修改
+--- @type {env_key:env_value}
+_M.proxy = setmetatable({}, {
+    --- 代理写
+    --- @param key env_key
+    --- @param value env_value
+    __newindex = function(_, key, value)
+        _M.set(key, value)
+    end,
+    --- 代理读
+    --- @param key env_key
+    --- @return env_value
+    __index = function(_, key)
+        return _M.get(key)
+    end
+})
 
 --- string[]与posix的:分割的环境变量互转
 
@@ -33,11 +52,7 @@ end
 --- @param posix_env string
 --- @return string[]
 function _M:from_posix(posix_env)
-    local env_val_list = {}
-    for env_val in string.gmatch(posix_env, "[^:]+") do
-        table.insert(env_val_list, env_val)
-    end
-    return env_val_list
+    return strings.split(posix_env, ":")
 end
 
 --- string[]转posix的:分割的环境变量
