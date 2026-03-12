@@ -1,10 +1,8 @@
 --- 常用工具
+--- 这里存放lua本身的小工具
 --- @class utils
 local _M = {}
 local base = _G
-local env = require("core.env")
-local unistd = require("posix.unistd")
-local stat = require("posix.sys.stat")
 
 --- 用于写入一个表的元表的某个项而不影响原有元表
 --- @param table table
@@ -92,43 +90,6 @@ function _M.table_has_key(t, key)
         return true
     end
     return false
-end
-
---- 判断路径是否为常规文件(跟随软链接)
---- @param path string
---- @return boolean
-function _M.is_regfile(path)
-    local path_stat = stat.stat(path)
-    return path_stat
-        and stat.S_ISREG(path_stat.st_mode) ~= 0
-        or false
-end
-
---- 从传入的paths或者PATH中查找可执行文件，返回第一个找到的路径
---- @param exec_name string
---- @param paths string[]?
---- @return string?
-function _M.find_executable(exec_name, paths)
-    -- 处理绝对路径和多级相对路径exec_name的情况
-    -- /usr/bin/ls
-    -- bin/ls
-    -- ./ls
-    if exec_name:find("/") then
-        if unistd.access(exec_name, 'x') and _M.is_regfile(exec_name) then
-            return exec_name
-        end
-        return nil
-    end
-
-    -- 一级相对路径
-    paths = paths or env.from_posix(env.get("PATH"))
-    for _, path in ipairs(paths) do
-        local exec_path = path .. "/" .. exec_name
-        if unistd.access(exec_path, 'x') and _M.is_regfile(exec_path) then
-            return exec_path
-        end
-    end
-    return nil
 end
 
 return _M
